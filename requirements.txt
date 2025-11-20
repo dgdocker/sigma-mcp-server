@@ -1,0 +1,17 @@
+# MCP Server Dependencies
+mcp>=1.0.0
+
+# HTTP Client
+httpx>=0.25.0
+
+# Async support
+asyncio-mqtt>=0.13.0
+
+# Data validation
+pydantic>=2.0.0
+
+# Logging and utilities
+python-dotenv>=1.0.0
+
+# Optional: Additional utilities
+typing-extensions>=4.8.0

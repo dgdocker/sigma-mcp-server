@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  sigma-mcp-server:
+    build: .
+    container_name: sigma-mcp-server
+    
+    # MCP servers need interactive mode and TTY for stdio communication
+    stdin_open: true
+    tty: true
+    
+    # Load environment variables from .env file
+    env_file:
+      - .env
+    
+    environment:
+      - PYTHONUNBUFFERED=1
+      
+    # Mount logs directory
+    volumes:
+      - ./logs:/app/logs:rw
+    
+    # Prevent restart loops during debugging
+    restart: "no"
