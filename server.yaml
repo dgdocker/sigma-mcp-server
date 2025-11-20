@@ -1,0 +1,40 @@
+name: sigma-computing
+image: mcp/sigma-computing
+type: server
+meta:
+  category: data-analytics
+  tags:
+    - data-analytics
+    - business-intelligence
+    - sigma-computing
+    - workbooks
+    - datasets
+about:
+  title: Sigma Computing MCP Server
+  description: Access Sigma Computing's REST API for workbook management, dataset operations, user management, and data exports. Manage workbooks, datasets, members, teams, and export data programmatically.
+  icon: https://www.sigmacomputing.com/favicon.ico
+source:
+  project: https://github.com/dgdocker/sigma-mcp-server
+  commit: a9c32a8
+config:
+  description: Configure access to your Sigma Computing organization
+  secrets:
+    - name: sigma-computing.client_id
+      env: SIGMA_CLIENT_ID
+      example: your_sigma_client_id
+    - name: sigma-computing.client_secret
+      env: SIGMA_CLIENT_SECRET
+      example: your_sigma_client_secret
+  env:
+    - name: SIGMA_BASE_URL
+      example: https://aws-api.sigmacomputing.com
+      value: '{{sigma-computing.base_url}}'
+  parameters:
+    type: object
+    properties:
+      base_url:
+        type: string
+        description: API base URL for your Sigma organization (see documentation for cloud-specific URLs)
+    required:
+      - base_url
+

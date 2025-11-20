@@ -1,0 +1,392 @@
+[
+  {
+    "name": "sigma_list_workbooks",
+    "description": "List all Sigma Computing workbooks",
+    "arguments": [
+      {
+        "name": "limit",
+        "type": "integer",
+        "desc": "Number of workbooks to return (default: 50, max: 1000)"
+      },
+      {
+        "name": "page",
+        "type": "string",
+        "desc": "Page token for pagination"
+      }
+    ]
+  },
+  {
+    "name": "sigma_get_workbook",
+    "description": "Get detailed information about a specific workbook",
+    "arguments": [
+      {
+        "name": "workbook_id",
+        "type": "string",
+        "desc": "Unique identifier for the workbook"
+      }
+    ]
+  },
+  {
+    "name": "sigma_create_workbook",
+    "description": "Create a new Sigma Computing workbook",
+    "arguments": [
+      {
+        "name": "name",
+        "type": "string",
+        "desc": "Name of the workbook"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "desc": "Description of the workbook"
+      },
+      {
+        "name": "folder_id",
+        "type": "string",
+        "desc": "ID of the folder to create workbook in"
+      }
+    ]
+  },
+  {
+    "name": "sigma_export_workbook",
+    "description": "Export data from a Sigma Computing workbook",
+    "arguments": [
+      {
+        "name": "workbook_id",
+        "type": "string",
+        "desc": "Unique identifier for the workbook"
+      },
+      {
+        "name": "format",
+        "type": "string",
+        "desc": "Export format (csv, xlsx, pdf, png, json)"
+      },
+      {
+        "name": "element_id",
+        "type": "string",
+        "desc": "Specific element ID to export"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "desc": "Name for the exported file"
+      }
+    ]
+  },
+  {
+    "name": "sigma_list_workbook_tags",
+    "description": "Get tags for a specific workbook",
+    "arguments": [
+      {
+        "name": "workbook_id",
+        "type": "string",
+        "desc": "Unique identifier of the workbook"
+      },
+      {
+        "name": "limit",
+        "type": "integer",
+        "desc": "Number of results to return per page (max: 1000)"
+      },
+      {
+        "name": "page",
+        "type": "string",
+        "desc": "Page token for pagination"
+      }
+    ]
+  },
+  {
+    "name": "sigma_list_workbook_pages",
+    "description": "List all pages contained within a specified workbook",
+    "arguments": [
+      {
+        "name": "workbook_id",
+        "type": "string",
+        "desc": "Unique identifier of the workbook"
+      },
+      {
+        "name": "limit",
+        "type": "integer",
+        "desc": "Number of results to return per page (max: 1000)"
+      },
+      {
+        "name": "page",
+        "type": "string",
+        "desc": "Page token for pagination"
+      },
+      {
+        "name": "tag",
+        "type": "string",
+        "desc": "Tag name to retrieve pages from version-tagged workbooks"
+      },
+      {
+        "name": "bookmark_id",
+        "type": "string",
+        "desc": "Unique identifier of the bookmark to retrieve pages from saved view"
+      }
+    ]
+  },
+  {
+    "name": "sigma_list_page_elements",
+    "description": "List all elements from a specific page within a workbook",
+    "arguments": [
+      {
+        "name": "workbook_id",
+        "type": "string",
+        "desc": "Unique identifier of the workbook"
+      },
+      {
+        "name": "page_id",
+        "type": "string",
+        "desc": "Unique identifier of the workbook page"
+      },
+      {
+        "name": "limit",
+        "type": "integer",
+        "desc": "Number of results to return per page (max: 1000)"
+      },
+      {
+        "name": "page",
+        "type": "string",
+        "desc": "Page token for pagination"
+      },
+      {
+        "name": "tag",
+        "type": "string",
+        "desc": "Tag name to retrieve elements from version-tagged workbooks"
+      },
+      {
+        "name": "bookmark_id",
+        "type": "string",
+        "desc": "Unique identifier of the bookmark to retrieve elements from saved view"
+      }
+    ]
+  },
+  {
+    "name": "sigma_get_element_query",
+    "description": "Get the SQL query associated with a specific element in a workbook",
+    "arguments": [
+      {
+        "name": "workbook_id",
+        "type": "string",
+        "desc": "Unique identifier of the workbook"
+      },
+      {
+        "name": "element_id",
+        "type": "string",
+        "desc": "Unique identifier of the workbook element"
+      },
+      {
+        "name": "limit",
+        "type": "integer",
+        "desc": "Number of results to return per page (max: 1000)"
+      },
+      {
+        "name": "page",
+        "type": "string",
+        "desc": "Page token for pagination"
+      }
+    ]
+  },
+  {
+    "name": "sigma_get_element_lineage",
+    "description": "Get the lineage and dependencies of a specific workbook element",
+    "arguments": [
+      {
+        "name": "workbook_id",
+        "type": "string",
+        "desc": "Unique identifier of the workbook"
+      },
+      {
+        "name": "element_id",
+        "type": "string",
+        "desc": "Unique identifier of the workbook element (must be a data element like table, pivot table, or visualization)"
+      }
+    ]
+  },
+  {
+    "name": "sigma_list_element_columns",
+    "description": "List columns associated with a specific element within a workbook",
+    "arguments": [
+      {
+        "name": "workbook_id",
+        "type": "string",
+        "desc": "Unique identifier of the workbook"
+      },
+      {
+        "name": "element_id",
+        "type": "string",
+        "desc": "Unique identifier of the workbook element"
+      },
+      {
+        "name": "limit",
+        "type": "integer",
+        "desc": "Number of results to return per page (max: 1000)"
+      },
+      {
+        "name": "page",
+        "type": "string",
+        "desc": "Page token for pagination"
+      }
+    ]
+  },
+  {
+    "name": "sigma_list_datasets",
+    "description": "List all Sigma Computing datasets",
+    "arguments": [
+      {
+        "name": "limit",
+        "type": "integer",
+        "desc": "Number of datasets to return"
+      }
+    ]
+  },
+  {
+    "name": "sigma_get_dataset",
+    "description": "Get detailed information about a specific dataset",
+    "arguments": [
+      {
+        "name": "dataset_id",
+        "type": "string",
+        "desc": "Unique identifier for the dataset"
+      }
+    ]
+  },
+  {
+    "name": "sigma_materialize_dataset",
+    "description": "Trigger materialization of a dataset in the cloud data warehouse",
+    "arguments": [
+      {
+        "name": "dataset_id",
+        "type": "string",
+        "desc": "Unique identifier for the dataset"
+      },
+      {
+        "name": "schedule",
+        "type": "string",
+        "desc": "Materialization schedule"
+      }
+    ]
+  },
+  {
+    "name": "sigma_list_members",
+    "description": "List all organization members (paginated)",
+    "arguments": [
+      {
+        "name": "limit",
+        "type": "integer",
+        "desc": "Number of members to return per page (max: 1000)"
+      },
+      {
+        "name": "page",
+        "type": "string",
+        "desc": "Page token from nextPage in previous response"
+      },
+      {
+        "name": "search",
+        "type": "string",
+        "desc": "Search filter for members (URL encode @ as %40 for emails)"
+      },
+      {
+        "name": "includeArchived",
+        "type": "boolean",
+        "desc": "Include archived users in results"
+      },
+      {
+        "name": "includeInactive",
+        "type": "boolean",
+        "desc": "Include inactive users in results"
+      }
+    ]
+  },
+  {
+    "name": "sigma_get_member",
+    "description": "Get detailed information about a specific organization member by ID",
+    "arguments": [
+      {
+        "name": "member_id",
+        "type": "string",
+        "desc": "Unique identifier for the member"
+      }
+    ]
+  },
+  {
+    "name": "sigma_create_member",
+    "description": "Create a new member in the organization",
+    "arguments": [
+      {
+        "name": "email",
+        "type": "string",
+        "desc": "Email address of the new member"
+      },
+      {
+        "name": "first_name",
+        "type": "string",
+        "desc": "First name of the member"
+      },
+      {
+        "name": "last_name",
+        "type": "string",
+        "desc": "Last name of the member"
+      },
+      {
+        "name": "account_type",
+        "type": "string",
+        "desc": "Account type for the member (viewer, creator, admin)"
+      }
+    ]
+  },
+  {
+    "name": "sigma_list_member_teams",
+    "description": "List all teams for a specific organization member",
+    "arguments": [
+      {
+        "name": "member_id",
+        "type": "string",
+        "desc": "Unique identifier for the member"
+      },
+      {
+        "name": "limit",
+        "type": "integer",
+        "desc": "Number of teams to return per page (max: 1000)"
+      },
+      {
+        "name": "page",
+        "type": "string",
+        "desc": "Page token from nextPage in previous response"
+      }
+    ]
+  },
+  {
+    "name": "sigma_list_teams",
+    "description": "List all teams in the organization",
+    "arguments": []
+  },
+  {
+    "name": "sigma_list_account_types",
+    "description": "List all account types available in the organization",
+    "arguments": [
+      {
+        "name": "page_size",
+        "type": "integer",
+        "desc": "Number of results to return per page (max: 1000, default: 50)"
+      },
+      {
+        "name": "page_token",
+        "type": "string",
+        "desc": "Page token for pagination"
+      }
+    ]
+  },
+  {
+    "name": "sigma_get_account_type_permissions",
+    "description": "Get all feature permissions for a specific account type",
+    "arguments": [
+      {
+        "name": "account_type_id",
+        "type": "string",
+        "desc": "Unique identifier of the account type"
+      }
+    ]
+  }
+]
+
