@@ -94,7 +94,7 @@ def init_sigma_api():
     """Initialize Sigma API client from environment variables"""
     global sigma_api
     
-    base_url = os.getenv("SIGMA_BASE_URL", "https://api.sigmacomputing.com")
+    base_url = os.getenv("SIGMA_BASE_URL", "https://aws-api.sigmacomputing.com")
     client_id = os.getenv("SIGMA_CLIENT_ID")
     client_secret = os.getenv("SIGMA_CLIENT_SECRET")
     

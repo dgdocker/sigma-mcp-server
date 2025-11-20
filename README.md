@@ -37,8 +37,10 @@ Choose one of two deployment options:
    ```bash
    SIGMA_CLIENT_ID=your_actual_client_id
    SIGMA_CLIENT_SECRET=your_actual_client_secret
-   SIGMA_BASE_URL=https://api.sigmacomputing.com
+   SIGMA_BASE_URL=https://aws-api.sigmacomputing.com
    ```
+   
+   > **Note:** The API base URL depends on your Sigma organization's cloud provider. See [How to identify your API URL](#identifying-your-api-base-url) below.
 
 3. **Build and run:**
    ```bash
@@ -58,13 +60,53 @@ Choose one of two deployment options:
    ```bash
    export SIGMA_CLIENT_ID="your_client_id"
    export SIGMA_CLIENT_SECRET="your_client_secret"
-   export SIGMA_BASE_URL="https://api.sigmacomputing.com"
+   export SIGMA_BASE_URL="https://aws-api.sigmacomputing.com"
    ```
+   
+   > **Note:** The API base URL depends on your Sigma organization's cloud provider. See [How to identify your API URL](#identifying-your-api-base-url) below.
 
 3. **Run the server:**
    ```bash
    python sigma_mcp_server.py
    ```
+
+---
+
+## Identifying Your API Base URL
+
+The Sigma API base URL varies depending on which cloud provider hosts your organization. Using the correct URL is **required** for the server to work.
+
+### Finding Your Base URL
+
+You can find your organization's API base URL in two ways:
+
+#### Method 1: Check in Sigma (Recommended)
+1. Log into your Sigma Computing organization
+2. Go to **Administration** > **Developer Access**
+3. Look for **API base URL** - this is your correct URL
+
+#### Method 2: Determine from Cloud Provider
+1. Go to **Administration** > **Account** > **General Settings**
+2. Check the **Cloud** field under **Site**
+3. Match your cloud provider to the table below:
+
+| Cloud Provider | Base URL |
+|----------------|----------|
+| AWS-US (West) | `https://aws-api.sigmacomputing.com` |
+| AWS-US (East) | `https://api.us-a.aws.sigmacomputing.com` |
+| AWS-CA | `https://api.ca.aws.sigmacomputing.com` |
+| AWS-EU | `https://api.eu.aws.sigmacomputing.com` |
+| AWS-UK | `https://api.uk.aws.sigmacomputing.com` |
+| AWS-AU | `https://api.au.aws.sigmacomputing.com` |
+| Azure-US | `https://api.us.azure.sigmacomputing.com` |
+| Azure-EU | `https://api.eu.azure.sigmacomputing.com` |
+| Azure-CA | `https://api.ca.azure.sigmacomputing.com` |
+| Azure-UK | `https://api.uk.azure.sigmacomputing.com` |
+| GCP | `https://api.sigmacomputing.com` |
+
+**Default in this project:** `https://aws-api.sigmacomputing.com` (AWS-US West)
+
+> 📚 **Official Documentation:** [Get Started with Sigma API - Prerequisites](https://help.sigmacomputing.com/reference/get-started-sigma-api#prerequisites)
 
 ---
 
@@ -111,7 +153,7 @@ Add to your Claude Desktop config file:
       "env": {
         "SIGMA_CLIENT_ID": "your_client_id",
         "SIGMA_CLIENT_SECRET": "your_client_secret",
-        "SIGMA_BASE_URL": "https://api.sigmacomputing.com"
+        "SIGMA_BASE_URL": "https://aws-api.sigmacomputing.com"
       }
     }
   }
@@ -409,7 +451,7 @@ After updating the config file:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `SIGMA_BASE_URL` | Sigma Computing API base URL | `https://api.sigmacomputing.com` |
+| `SIGMA_BASE_URL` | Sigma Computing API base URL (see [Identifying Your API Base URL](#identifying-your-api-base-url)) | `https://aws-api.sigmacomputing.com` |
 | `SIGMA_CLIENT_ID` | Your Sigma Computing client ID | Required |
 | `SIGMA_CLIENT_SECRET` | Your Sigma Computing client secret | Required |
 | `LOG_LEVEL` | Logging level | `INFO` |
