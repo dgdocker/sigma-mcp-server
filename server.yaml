@@ -15,7 +15,7 @@ about:
   icon: https://www.sigmacomputing.com/favicon.ico
 source:
   project: https://github.com/dgdocker/sigma-mcp-server
-  commit: a9c32a8
+  commit: 8f5a5bb
 config:
   description: Configure access to your Sigma Computing organization
   secrets:
