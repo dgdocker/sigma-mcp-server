@@ -112,31 +112,32 @@ You can find your organization's API base URL in two ways:
 
 ## Claude Desktop Configuration
 
-After deploying the server, configure Claude Desktop to use it:
+After deploying the server, configure Claude Desktop to use it.
 
-### For Option 1 (Docker Compose)
+**Config file location (macOS):** `~/Library/Application Support/Claude/claude_desktop_config.json`
 
-Add to your Claude Desktop config file (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+### For Option 1 (Docker - Recommended)
+
+First, start the container:
+```bash
+cd /path/to/mcp-sigma-server
+docker-compose up -d
+```
+
+Then add to your Claude Desktop config:
 
 ```json
 {
   "mcpServers": {
     "sigma-computing": {
       "command": "docker",
-      "args": [
-        "compose",
-        "-f",
-        "/absolute/path/to/mcp-sigma-server/docker-compose.yml",
-        "run",
-        "--rm",
-        "sigma-mcp-server"
-      ]
+      "args": ["exec", "-i", "sigma-mcp-server", "python", "sigma_mcp_server.py"]
     }
   }
 }
 ```
 
-**Important:** Replace `/absolute/path/to/mcp-sigma-server/` with the actual path to your project directory.
+**Note:** The container must be running for Claude to connect. Use `docker-compose up -d` to start it in the background.
 
 ### For Option 2 (Direct Python)
 
