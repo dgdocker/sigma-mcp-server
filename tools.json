@@ -49,7 +49,7 @@
   },
   {
     "name": "sigma_export_workbook",
-    "description": "Export data from a Sigma Computing workbook",
+    "description": "Export data from a Sigma Computing workbook element. Returns a queryId to use with sigma_download_export.",
     "arguments": [
       {
         "name": "workbook_id",
@@ -57,19 +57,39 @@
         "desc": "Unique identifier for the workbook"
       },
       {
-        "name": "format",
-        "type": "string",
-        "desc": "Export format (csv, xlsx, pdf, png, json)"
-      },
-      {
         "name": "element_id",
         "type": "string",
-        "desc": "Specific element ID to export"
+        "desc": "Element ID to export (required - get from sigma_list_page_elements)"
       },
       {
-        "name": "name",
+        "name": "format_type",
         "type": "string",
-        "desc": "Name for the exported file"
+        "desc": "Export format type (csv, xlsx, json, jsonl, pdf, png)"
+      },
+      {
+        "name": "pdf_layout",
+        "type": "string",
+        "desc": "PDF layout orientation: portrait or landscape (only for pdf format)"
+      },
+      {
+        "name": "png_width",
+        "type": "integer",
+        "desc": "PNG width in pixels (only for png format)"
+      },
+      {
+        "name": "png_height",
+        "type": "integer",
+        "desc": "PNG height in pixels (only for png format)"
+      },
+      {
+        "name": "row_limit",
+        "type": "integer",
+        "desc": "Maximum rows to export (up to 1 million per chunk)"
+      },
+      {
+        "name": "offset",
+        "type": "integer",
+        "desc": "Starting row for batched exports"
       }
     ]
   },

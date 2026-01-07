@@ -8,7 +8,7 @@ A Model Context Protocol (MCP) server that provides access to Sigma Computing's 
 - **Workbook Management**: List, create, update, delete, and export workbooks
 - **Dataset Operations**: Access and materialize datasets
 - **User Management**: Manage organization members and teams
-- **Data Export**: Export workbook data in multiple formats (CSV, XLSX, PDF, PNG, JSON)
+- **Data Export**: Export workbook elements in multiple formats (CSV, XLSX, JSON, JSONL, PDF, PNG) with pagination support
 - **Connection Management**: Access data warehouse connections
 
 ## Quick Start
@@ -182,7 +182,7 @@ After updating the config file:
 - `sigma_list_workbooks` - List all workbooks with pagination
 - `sigma_get_workbook` - Get detailed workbook information
 - `sigma_create_workbook` - Create a new workbook
-- `sigma_export_workbook` - Export workbook data in various formats
+- `sigma_export_workbook` - Export workbook element data (CSV, XLSX, JSON, PDF, PNG)
 - `sigma_download_export` - Download an exported file using the queryId
 - `sigma_list_workbook_tags` - Get tags for a specific workbook
 - `sigma_list_workbook_pages` - List all pages contained within a workbook
@@ -253,9 +253,30 @@ After updating the config file:
   "tool": "sigma_export_workbook", 
   "arguments": {
     "workbook_id": "workbook-uuid-here",
-    "format": "csv",
-    "element_id": "optional-element-uuid",
-    "name": "my-export"
+    "element_id": "element-uuid-here",
+    "format_type": "csv"
+  }
+}
+```
+
+**Export Format Options:**
+- `csv`, `xlsx`, `json`, `jsonl` - Data formats
+- `pdf` - Requires `pdf_layout` parameter (`portrait` or `landscape`)
+- `png` - Optionally supports `png_width` and `png_height` in pixels
+
+**Additional Export Parameters:**
+- `row_limit` - Maximum rows to export (up to 1 million)
+- `offset` - Starting row for batched exports
+
+**PDF Export Example:**
+```json
+{
+  "tool": "sigma_export_workbook",
+  "arguments": {
+    "workbook_id": "workbook-uuid-here",
+    "element_id": "element-uuid-here",
+    "format_type": "pdf",
+    "pdf_layout": "landscape"
   }
 }
 ```
@@ -270,7 +291,12 @@ After updating the config file:
 }
 ```
 
-> **Note:** First call `sigma_export_workbook` to initiate the export and get a `queryId`, then use `sigma_download_export` to download the file once it's ready.
+> **Export Workflow:**
+> 1. Call `sigma_export_workbook` → Returns `queryId`
+> 2. Wait a few seconds for the export to complete (Sigma processes asynchronously)
+> 3. Call `sigma_download_export` with the `queryId` → Returns the file content
+> 
+> Note: If you get a 204 response, the export is still processing. Wait and retry.
 
 ### List Datasets
 ```json

@@ -81,10 +81,17 @@ class SigmaAPI:
         response = await self.client.request(method, url, **kwargs)
         response.raise_for_status()
         
+        # Handle 204 No Content (export not ready)
+        if response.status_code == 204:
+            return {"status": "not_ready", "message": "Export is still processing. Please wait and try again."}
+        
         if response.headers.get("content-type", "").startswith("application/json"):
             return response.json()
+        elif response.headers.get("content-type", "").startswith("text/"):
+            # Handle CSV and other text responses
+            return {"data": response.text, "content_type": response.headers.get("content-type"), "size": len(response.content)}
         else:
-            return {"data": response.content, "content_type": response.headers.get("content-type")}
+            return {"data": response.content, "content_type": response.headers.get("content-type"), "size": len(response.content)}
 
 
 # Initialize Sigma API client
@@ -224,7 +231,7 @@ async def handle_list_tools() -> List[Tool]:
         ),
         Tool(
             name="sigma_export_workbook",
-            description="Export data from a Sigma Computing workbook",
+            description="Export data from a Sigma Computing workbook element. Returns a queryId to use with sigma_download_export.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -232,23 +239,39 @@ async def handle_list_tools() -> List[Tool]:
                         "type": "string",
                         "description": "Unique identifier for the workbook",
                     },
-                    "format": {
-                        "type": "string",
-                        "enum": ["csv", "xlsx", "pdf", "png", "json"],
-                        "description": "Export format",
-                        "default": "csv"
-                    },
                     "element_id": {
                         "type": "string",
-                        "description": "Specific element ID to export",
+                        "description": "Element ID to export (required - get from sigma_list_page_elements)",
                     },
-                    "name": {
+                    "format_type": {
                         "type": "string",
-                        "description": "Name for the exported file",
-                        "default": "export-data"
+                        "enum": ["csv", "xlsx", "json", "jsonl", "pdf", "png"],
+                        "description": "Export format type",
+                        "default": "csv"
+                    },
+                    "pdf_layout": {
+                        "type": "string",
+                        "enum": ["portrait", "landscape"],
+                        "description": "PDF layout orientation (only for pdf format)",
+                    },
+                    "png_width": {
+                        "type": "integer",
+                        "description": "PNG width in pixels (only for png format)",
+                    },
+                    "png_height": {
+                        "type": "integer",
+                        "description": "PNG height in pixels (only for png format)",
+                    },
+                    "row_limit": {
+                        "type": "integer",
+                        "description": "Maximum rows to export (up to 1 million per chunk)",
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": "Starting row for batched exports",
                     }
                 },
-                "required": ["workbook_id"],
+                "required": ["workbook_id", "element_id"],
             },
         ),
         Tool(
@@ -657,11 +680,34 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
         
         elif name == "sigma_export_workbook":
             workbook_id = arguments["workbook_id"]
+            element_id = arguments["element_id"]
+            format_type = arguments.get("format_type", "csv")
+            
+            # Build format object based on type
+            if format_type == "pdf":
+                format_obj = {
+                    "type": "pdf",
+                    "layout": arguments.get("pdf_layout", "portrait")
+                }
+            elif format_type == "png":
+                format_obj = {"type": "png"}
+                if arguments.get("png_width"):
+                    format_obj["pixelWidth"] = arguments["png_width"]
+                if arguments.get("png_height"):
+                    format_obj["pixelHeight"] = arguments["png_height"]
+            else:
+                format_obj = {"type": format_type}
+            
             payload = {
-                "format": arguments.get("format", "csv"),
-                "elementId": arguments.get("element_id", ""),
-                "name": arguments.get("name", "export-data")
+                "format": format_obj,
+                "elementId": element_id
             }
+            
+            # Add optional parameters
+            if arguments.get("row_limit"):
+                payload["rowLimit"] = arguments["row_limit"]
+            if arguments.get("offset"):
+                payload["offset"] = arguments["offset"]
             
             data = await sigma_api.make_request(
                 "POST",
@@ -680,10 +726,26 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
                 f"/v2/query/{query_id}/download"
             )
             
-            # Handle different response types (could be binary data)
-            if isinstance(data, dict) and "data" in data:
-                # Binary data response
-                return [TextContent(type="text", text=f"Export downloaded successfully. Content-Type: {data.get('content_type', 'unknown')}. Size: {len(data.get('data', b''))} bytes")]
+            # Handle 204 Not Ready response
+            if data.get("status") == "not_ready":
+                return [TextContent(type="text", text="Export is still processing. Please wait a few seconds and try again.")]
+            
+            # Handle text responses (CSV, JSON, etc.)
+            if isinstance(data.get("data"), str):
+                content_type = data.get("content_type", "unknown")
+                size = data.get("size", 0)
+                content = data["data"]
+                
+                # Return the actual content for text formats
+                if "csv" in content_type or "json" in content_type or "text" in content_type:
+                    return [TextContent(type="text", text=f"Content-Type: {content_type}\nSize: {size} bytes\n\n{content}")]
+                else:
+                    return [TextContent(type="text", text=f"Export downloaded. Content-Type: {content_type}. Size: {size} bytes")]
+            
+            # Handle binary responses
+            elif isinstance(data.get("data"), bytes):
+                return [TextContent(type="text", text=f"Export downloaded (binary). Content-Type: {data.get('content_type', 'unknown')}. Size: {data.get('size', 0)} bytes")]
+            
             else:
                 return [TextContent(type="text", text=json.dumps(data, indent=2))]
         
