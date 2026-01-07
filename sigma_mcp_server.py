@@ -252,6 +252,20 @@ async def handle_list_tools() -> List[Tool]:
             },
         ),
         Tool(
+            name="sigma_download_export",
+            description="Download an exported file using the queryId from sigma_export_workbook. The export must be ready before downloading.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query_id": {
+                        "type": "string",
+                        "description": "Query ID returned from sigma_export_workbook",
+                    }
+                },
+                "required": ["query_id"],
+            },
+        ),
+        Tool(
             name="sigma_list_datasets",
             description="List all Sigma Computing datasets",
             inputSchema={
@@ -657,6 +671,21 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
             )
             
             return [TextContent(type="text", text=json.dumps(data, indent=2))]
+        
+        elif name == "sigma_download_export":
+            query_id = arguments["query_id"]
+            
+            data = await sigma_api.make_request(
+                "GET",
+                f"/v2/query/{query_id}/download"
+            )
+            
+            # Handle different response types (could be binary data)
+            if isinstance(data, dict) and "data" in data:
+                # Binary data response
+                return [TextContent(type="text", text=f"Export downloaded successfully. Content-Type: {data.get('content_type', 'unknown')}. Size: {len(data.get('data', b''))} bytes")]
+            else:
+                return [TextContent(type="text", text=json.dumps(data, indent=2))]
         
         elif name == "sigma_list_datasets":
             limit = arguments.get("limit", 50)

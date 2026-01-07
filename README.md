@@ -183,6 +183,7 @@ After updating the config file:
 - `sigma_get_workbook` - Get detailed workbook information
 - `sigma_create_workbook` - Create a new workbook
 - `sigma_export_workbook` - Export workbook data in various formats
+- `sigma_download_export` - Download an exported file using the queryId
 - `sigma_list_workbook_tags` - Get tags for a specific workbook
 - `sigma_list_workbook_pages` - List all pages contained within a workbook
 - `sigma_list_page_elements` - List all elements from a specific page within a workbook
@@ -258,6 +259,18 @@ After updating the config file:
   }
 }
 ```
+
+### Download Exported File
+```json
+{
+  "tool": "sigma_download_export",
+  "arguments": {
+    "query_id": "query-id-from-export-response"
+  }
+}
+```
+
+> **Note:** First call `sigma_export_workbook` to initiate the export and get a `queryId`, then use `sigma_download_export` to download the file once it's ready.
 
 ### List Datasets
 ```json

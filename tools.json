@@ -74,6 +74,17 @@
     ]
   },
   {
+    "name": "sigma_download_export",
+    "description": "Download an exported file using the queryId from sigma_export_workbook. The export must be ready before downloading.",
+    "arguments": [
+      {
+        "name": "query_id",
+        "type": "string",
+        "desc": "Query ID returned from sigma_export_workbook"
+      }
+    ]
+  },
+  {
     "name": "sigma_list_workbook_tags",
     "description": "Get tags for a specific workbook",
     "arguments": [
