@@ -231,7 +231,7 @@ async def handle_list_tools() -> List[Tool]:
         ),
         Tool(
             name="sigma_export_workbook",
-            description="Export data from a Sigma Computing workbook element. Returns a queryId to use with sigma_download_export.",
+            description="Export from Sigma workbook. Three modes: (1) Full workbook - omit element_id and page_id for PDF/PNG/XLSX of all pages, (2) Single page - use page_id for PDF/PNG/XLSX of one page, (3) Element data - use element_id for CSV/JSON/XLSX of table/chart data. Returns queryId for sigma_download_export.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -241,37 +241,42 @@ async def handle_list_tools() -> List[Tool]:
                     },
                     "element_id": {
                         "type": "string",
-                        "description": "Element ID to export (required - get from sigma_list_page_elements)",
+                        "description": "Element ID for data export (CSV, JSON, JSONL, XLSX). Get from sigma_list_page_elements.",
+                    },
+                    "page_id": {
+                        "type": "string",
+                        "description": "Page ID for single page export (PDF, PNG, XLSX only). Get from sigma_list_workbook_pages.",
                     },
                     "format_type": {
                         "type": "string",
                         "enum": ["csv", "xlsx", "json", "jsonl", "pdf", "png"],
-                        "description": "Export format type",
-                        "default": "csv"
+                        "description": "Export format. Full workbook/page: pdf, png, xlsx. Element: all formats.",
+                        "default": "pdf"
                     },
                     "pdf_layout": {
                         "type": "string",
                         "enum": ["portrait", "landscape"],
-                        "description": "PDF layout orientation (only for pdf format)",
+                        "description": "PDF layout orientation",
+                        "default": "landscape"
                     },
                     "png_width": {
                         "type": "integer",
-                        "description": "PNG width in pixels (only for png format)",
+                        "description": "PNG width in pixels",
                     },
                     "png_height": {
                         "type": "integer",
-                        "description": "PNG height in pixels (only for png format)",
+                        "description": "PNG height in pixels",
                     },
                     "row_limit": {
                         "type": "integer",
-                        "description": "Maximum rows to export (up to 1 million per chunk)",
+                        "description": "Max rows to export (element exports only, up to 1M)",
                     },
                     "offset": {
                         "type": "integer",
-                        "description": "Starting row for batched exports",
+                        "description": "Starting row for batched exports (element exports only)",
                     }
                 },
-                "required": ["workbook_id", "element_id"],
+                "required": ["workbook_id"],
             },
         ),
         Tool(
@@ -680,14 +685,27 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
         
         elif name == "sigma_export_workbook":
             workbook_id = arguments["workbook_id"]
-            element_id = arguments["element_id"]
-            format_type = arguments.get("format_type", "csv")
+            element_id = arguments.get("element_id")
+            page_id = arguments.get("page_id")
+            format_type = arguments.get("format_type", "pdf")
+            
+            # Determine export mode
+            if element_id:
+                export_mode = "element"
+            elif page_id:
+                export_mode = "page"
+            else:
+                export_mode = "workbook"  # Full workbook export
+            
+            # Validate format for non-element exports
+            if export_mode in ["page", "workbook"] and format_type in ["csv", "json", "jsonl"]:
+                return [TextContent(type="text", text=f"Error: {export_mode.title()} exports only support pdf, png, or xlsx formats. Use element_id for {format_type} data exports.")]
             
             # Build format object based on type
             if format_type == "pdf":
                 format_obj = {
                     "type": "pdf",
-                    "layout": arguments.get("pdf_layout", "portrait")
+                    "layout": arguments.get("pdf_layout", "landscape")
                 }
             elif format_type == "png":
                 format_obj = {"type": "png"}
@@ -698,16 +716,21 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
             else:
                 format_obj = {"type": format_type}
             
-            payload = {
-                "format": format_obj,
-                "elementId": element_id
-            }
+            payload = {"format": format_obj}
             
-            # Add optional parameters
-            if arguments.get("row_limit"):
-                payload["rowLimit"] = arguments["row_limit"]
-            if arguments.get("offset"):
-                payload["offset"] = arguments["offset"]
+            # Add element or page ID (omit both for full workbook)
+            if element_id:
+                payload["elementId"] = element_id
+            elif page_id:
+                payload["pageId"] = page_id
+            # No ID = full workbook export
+            
+            # Add optional parameters (element exports only)
+            if element_id:
+                if arguments.get("row_limit"):
+                    payload["rowLimit"] = arguments["row_limit"]
+                if arguments.get("offset"):
+                    payload["offset"] = arguments["offset"]
             
             data = await sigma_api.make_request(
                 "POST",
@@ -715,6 +738,10 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
                 json=payload,
                 headers={"Content-Type": "application/json"}
             )
+            
+            # Add helpful context to response
+            mode_info = {"export_mode": export_mode, "format": format_type}
+            data.update(mode_info)
             
             return [TextContent(type="text", text=json.dumps(data, indent=2))]
         

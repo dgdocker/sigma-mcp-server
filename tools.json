@@ -49,47 +49,52 @@
   },
   {
     "name": "sigma_export_workbook",
-    "description": "Export data from a Sigma Computing workbook element. Returns a queryId to use with sigma_download_export.",
+    "description": "Export from Sigma workbook. Three modes: (1) Full workbook - omit element_id/page_id, (2) Single page - use page_id, (3) Element data - use element_id. Returns queryId for sigma_download_export.",
     "arguments": [
       {
         "name": "workbook_id",
         "type": "string",
-        "desc": "Unique identifier for the workbook"
+        "desc": "Unique identifier for the workbook (required)"
       },
       {
         "name": "element_id",
         "type": "string",
-        "desc": "Element ID to export (required - get from sigma_list_page_elements)"
+        "desc": "Element ID for data export (supports all formats)"
+      },
+      {
+        "name": "page_id",
+        "type": "string",
+        "desc": "Page ID for single page export (pdf, png, xlsx only)"
       },
       {
         "name": "format_type",
         "type": "string",
-        "desc": "Export format type (csv, xlsx, json, jsonl, pdf, png)"
+        "desc": "Export format: pdf, png, xlsx (all modes) or csv, json, jsonl (element only). Default: pdf"
       },
       {
         "name": "pdf_layout",
         "type": "string",
-        "desc": "PDF layout orientation: portrait or landscape (only for pdf format)"
+        "desc": "PDF orientation: portrait or landscape (default: landscape)"
       },
       {
         "name": "png_width",
         "type": "integer",
-        "desc": "PNG width in pixels (only for png format)"
+        "desc": "PNG width in pixels"
       },
       {
         "name": "png_height",
         "type": "integer",
-        "desc": "PNG height in pixels (only for png format)"
+        "desc": "PNG height in pixels"
       },
       {
         "name": "row_limit",
         "type": "integer",
-        "desc": "Maximum rows to export (up to 1 million per chunk)"
+        "desc": "Max rows (element exports only, up to 1M)"
       },
       {
         "name": "offset",
         "type": "integer",
-        "desc": "Starting row for batched exports"
+        "desc": "Starting row for batched exports (element only)"
       }
     ]
   },

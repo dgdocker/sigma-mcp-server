@@ -182,7 +182,7 @@ After updating the config file:
 - `sigma_list_workbooks` - List all workbooks with pagination
 - `sigma_get_workbook` - Get detailed workbook information
 - `sigma_create_workbook` - Create a new workbook
-- `sigma_export_workbook` - Export workbook element data (CSV, XLSX, JSON, PDF, PNG)
+- `sigma_export_workbook` - Export full workbook, single page, or element data (PDF, PNG, XLSX, CSV, JSON)
 - `sigma_download_export` - Download an exported file using the queryId
 - `sigma_list_workbook_tags` - Get tags for a specific workbook
 - `sigma_list_workbook_pages` - List all pages contained within a workbook
@@ -248,6 +248,38 @@ After updating the config file:
 ```
 
 ### Export Workbook Data
+
+The export tool supports three modes:
+
+#### Mode 1: Full Workbook Export (PDF/PNG/XLSX)
+Export all visible pages as a single document:
+```json
+{
+  "tool": "sigma_export_workbook", 
+  "arguments": {
+    "workbook_id": "workbook-uuid-here",
+    "format_type": "pdf",
+    "pdf_layout": "landscape"
+  }
+}
+```
+
+#### Mode 2: Single Page Export (PDF/PNG/XLSX)
+Export one specific page:
+```json
+{
+  "tool": "sigma_export_workbook", 
+  "arguments": {
+    "workbook_id": "workbook-uuid-here",
+    "page_id": "page-id-here",
+    "format_type": "pdf",
+    "pdf_layout": "landscape"
+  }
+}
+```
+
+#### Mode 3: Element Data Export (CSV/JSON/XLSX)
+Export data from a specific table or visualization:
 ```json
 {
   "tool": "sigma_export_workbook", 
@@ -259,27 +291,18 @@ After updating the config file:
 }
 ```
 
-**Export Format Options:**
-- `csv`, `xlsx`, `json`, `jsonl` - Data formats
-- `pdf` - Requires `pdf_layout` parameter (`portrait` or `landscape`)
-- `png` - Optionally supports `png_width` and `png_height` in pixels
+**Format Options by Mode:**
+| Mode | Supported Formats |
+|------|-------------------|
+| Full Workbook | `pdf`, `png`, `xlsx` |
+| Single Page | `pdf`, `png`, `xlsx` |
+| Element Data | `csv`, `json`, `jsonl`, `xlsx`, `pdf`, `png` |
 
-**Additional Export Parameters:**
-- `row_limit` - Maximum rows to export (up to 1 million)
-- `offset` - Starting row for batched exports
-
-**PDF Export Example:**
-```json
-{
-  "tool": "sigma_export_workbook",
-  "arguments": {
-    "workbook_id": "workbook-uuid-here",
-    "element_id": "element-uuid-here",
-    "format_type": "pdf",
-    "pdf_layout": "landscape"
-  }
-}
-```
+**Additional Parameters:**
+- `pdf_layout` - `portrait` or `landscape` (default: landscape)
+- `png_width`, `png_height` - Dimensions in pixels
+- `row_limit` - Max rows (element exports only, up to 1M)
+- `offset` - Starting row for batched exports (element only)
 
 ### Download Exported File
 ```json
