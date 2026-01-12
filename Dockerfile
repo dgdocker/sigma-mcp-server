@@ -40,5 +40,5 @@ USER mcp
 # Add a test script to verify the server can start
 RUN python -c "import sys; print(f'Python version: {sys.version}'); import asyncio, httpx, mcp; print('All imports successful')"
 
-# Default command with better error handling
-CMD ["python", "-u", "sigma_mcp_server.py"]
+# Default command with streamable-http transport for deployment
+CMD ["python", "-u", "sigma_mcp_server.py", "--transport", "streamable-http", "--host", "0.0.0.0", "--port", "8000"]

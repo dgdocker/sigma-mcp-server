@@ -4,12 +4,32 @@ A Model Context Protocol (MCP) server that provides access to Sigma Computing's 
 
 ## Features
 
+- **Dual Transport Support**: STDIO (local) and HTTP/SSE (remote) transports
 - **Authentication**: Automatic token management with refresh
 - **Workbook Management**: List, create, update, delete, and export workbooks
 - **Dataset Operations**: Access and materialize datasets
 - **User Management**: Manage organization members and teams
 - **Data Export**: Export workbook elements in multiple formats (CSV, XLSX, JSON, JSONL, PDF, PNG) with pagination support
 - **Connection Management**: Access data warehouse connections
+- **Docker Ready**: Production-ready containerization for deployment
+
+## Transport Modes
+
+This server supports two transport protocols:
+
+### STDIO Transport (Default)
+- **Use case**: Local Claude Desktop integration, CLI tools
+- **Communication**: Standard input/output streams
+- **Best for**: Development, personal use, single-user scenarios
+
+### HTTP/SSE Transport (Streamable HTTP)
+- **Use case**: Remote deployment, web services, internal agent frameworks
+- **Communication**: HTTP with Server-Sent Events for streaming
+- **Best for**: Production deployment, Slack bots, multi-user scenarios, Kubernetes/Docker deployments
+- **Port**: 8000 (default)
+- **Endpoint**: `/mcp`
+
+You can switch between transports using the `--transport` flag when starting the server.
 
 ## Quick Start
 
@@ -25,7 +45,9 @@ Choose one of two deployment options:
 
 ---
 
-### Option 1: Docker Compose (Recommended)
+### Option 1: Docker Compose (Recommended for HTTP/SSE Transport)
+
+By default, Docker deployment uses **HTTP/SSE transport** on port 8000.
 
 1. **Prepare environment file:**
    ```bash
@@ -44,12 +66,21 @@ Choose one of two deployment options:
 
 3. **Build and run:**
    ```bash
-   docker-compose up --build
+   docker-compose up --build -d
    ```
+
+4. **Verify the server is running:**
+   ```bash
+   curl http://localhost:8000/mcp
+   ```
+
+The server is now accessible at `http://localhost:8000/mcp` for HTTP/SSE connections.
 
 ---
 
-### Option 2: Direct Python Execution
+### Option 2: Direct Python Execution (STDIO Transport)
+
+By default, Python execution uses **STDIO transport** for local Claude Desktop integration.
 
 1. **Install dependencies:**
    ```bash
@@ -66,8 +97,15 @@ Choose one of two deployment options:
    > **Note:** The API base URL depends on your Sigma organization's cloud provider. See [How to identify your API URL](#identifying-your-api-base-url) below.
 
 3. **Run the server:**
+   
+   **STDIO mode (default):**
    ```bash
    python sigma_mcp_server.py
+   ```
+   
+   **HTTP/SSE mode:**
+   ```bash
+   python sigma_mcp_server.py --transport streamable-http --host 0.0.0.0 --port 8000
    ```
 
 ---
@@ -116,30 +154,7 @@ After deploying the server, configure Claude Desktop to use it.
 
 **Config file location (macOS):** `~/Library/Application Support/Claude/claude_desktop_config.json`
 
-### For Option 1 (Docker - Recommended)
-
-First, start the container:
-```bash
-cd /path/to/mcp-sigma-server
-docker-compose up -d
-```
-
-Then add to your Claude Desktop config:
-
-```json
-{
-  "mcpServers": {
-    "sigma-computing": {
-      "command": "docker",
-      "args": ["exec", "-i", "sigma-mcp-server", "python", "sigma_mcp_server.py"]
-    }
-  }
-}
-```
-
-**Note:** The container must be running for Claude to connect. Use `docker-compose up -d` to start it in the background.
-
-### For Option 2 (Direct Python)
+### Method 1: Direct Python (STDIO - Recommended for Local Use)
 
 Add to your Claude Desktop config file:
 
@@ -165,6 +180,61 @@ Add to your Claude Desktop config file:
 - Replace `/absolute/path/to/mcp-sigma-server/` with the actual path to your project directory
 - Replace credential placeholders with your actual Sigma Computing credentials
 
+### Method 2: Connect to HTTP Server via mcp-remote
+
+If you're running the server in Docker (HTTP mode), use `mcp-remote` as a bridge:
+
+First, start the Docker container:
+```bash
+cd /path/to/mcp-sigma-server
+docker-compose up -d
+```
+
+Then add to your Claude Desktop config:
+
+```json
+{
+  "mcpServers": {
+    "sigma-computing": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "http://localhost:8000/mcp"
+      ]
+    }
+  }
+}
+```
+
+**Note:** This method allows Claude Desktop (which natively uses STDIO) to connect to the HTTP/SSE server running in Docker.
+
+### Method 3: Docker with STDIO (Alternative)
+
+Run the container with STDIO transport and connect directly:
+
+```json
+{
+  "mcpServers": {
+    "sigma-computing": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "--env-file",
+        "/absolute/path/to/.env",
+        "mcp-sigma-server",
+        "python",
+        "sigma_mcp_server.py",
+        "--transport",
+        "stdio"
+      ]
+    }
+  }
+}
+```
+
 ### Verifying the Connection
 
 After updating the config file:
@@ -173,6 +243,115 @@ After updating the config file:
 2. Look for the 🔌 MCP icon in Claude Desktop
 3. You should see "sigma-computing" listed as a connected server
 4. Test by asking Claude to list your Sigma workbooks
+
+---
+
+## Production Deployment (HTTP/SSE Transport)
+
+The HTTP/SSE transport is designed for production deployments where the MCP server needs to be accessed remotely or integrated with internal frameworks.
+
+### Use Cases
+
+- **Internal Agent Frameworks**: Deploy as a service for Slack bots, AI agents, or workflow automation
+- **Kubernetes/Docker**: Run as a containerized service with standard HTTP health checks
+- **Multi-User Access**: Multiple clients can connect to a single server instance
+- **Remote Access**: Access the MCP server over the network (with proper authentication/VPN)
+
+### Docker Image Build
+
+```bash
+# Build the image
+docker build -t sigma-mcp-server .
+
+# Run with HTTP transport (default in Docker)
+docker run -d \
+  --name sigma-mcp-server \
+  -p 8000:8000 \
+  -e SIGMA_CLIENT_ID="your_client_id" \
+  -e SIGMA_CLIENT_SECRET="your_client_secret" \
+  -e SIGMA_BASE_URL="https://aws-api.sigmacomputing.com" \
+  sigma-mcp-server
+```
+
+### Health Check
+
+The HTTP server includes a health check endpoint:
+
+```bash
+curl http://localhost:8000/mcp
+```
+
+### Environment Variables for HTTP Mode
+
+In addition to Sigma credentials, you can configure:
+
+```bash
+--transport streamable-http  # Use HTTP/SSE transport
+--host 0.0.0.0              # Bind to all interfaces
+--port 8000                 # Port to listen on (default: 8000)
+--log-level INFO            # Logging level
+```
+
+### Kubernetes Deployment Example
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sigma-mcp-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sigma-mcp-server
+  template:
+    metadata:
+      labels:
+        app: sigma-mcp-server
+    spec:
+      containers:
+      - name: sigma-mcp-server
+        image: sigma-mcp-server:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: SIGMA_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: sigma-credentials
+              key: client-id
+        - name: SIGMA_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: sigma-credentials
+              key: client-secret
+        - name: SIGMA_BASE_URL
+          value: "https://aws-api.sigmacomputing.com"
+        livenessProbe:
+          httpGet:
+            path: /mcp
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /mcp
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sigma-mcp-server
+spec:
+  selector:
+    app: sigma-mcp-server
+  ports:
+  - protocol: TCP
+    port: 8000
+    targetPort: 8000
+```
 
 ---
 
@@ -366,6 +545,8 @@ Export data from a specific table or visualization:
 }
 ```
 
+> **Note:** The `search` parameter works for members (searches email, first name, last name) but is NOT supported by the Sigma API for workbooks endpoint.
+
 ### Get Specific Member
 ```json
 {
@@ -510,6 +691,30 @@ Export data from a specific table or visualization:
 
 ## Configuration
 
+### Command-Line Arguments
+
+The server accepts the following command-line arguments:
+
+| Argument | Description | Default | Options |
+|----------|-------------|---------|---------|
+| `--transport` | Transport protocol to use | `stdio` | `stdio`, `streamable-http` |
+| `--host` | Host to bind to (HTTP only) | `0.0.0.0` | Any valid IP/hostname |
+| `--port` | Port to listen on (HTTP only) | `8000` | Any valid port number |
+| `--log-level` | Logging level | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
+
+**Examples:**
+
+```bash
+# STDIO mode (default)
+python sigma_mcp_server.py
+
+# HTTP mode on default port
+python sigma_mcp_server.py --transport streamable-http
+
+# HTTP mode on custom port with debug logging
+python sigma_mcp_server.py --transport streamable-http --port 9000 --log-level DEBUG
+```
+
 ### Environment Variables
 
 | Variable | Description | Default |
@@ -517,7 +722,6 @@ Export data from a specific table or visualization:
 | `SIGMA_BASE_URL` | Sigma Computing API base URL (see [Identifying Your API Base URL](#identifying-your-api-base-url)) | `https://aws-api.sigmacomputing.com` |
 | `SIGMA_CLIENT_ID` | Your Sigma Computing client ID | Required |
 | `SIGMA_CLIENT_SECRET` | Your Sigma Computing client secret | Required |
-| `LOG_LEVEL` | Logging level | `INFO` |
 
 ### Getting Sigma Computing API Credentials
 
@@ -572,12 +776,35 @@ docker-compose up --build
 1. **Authentication Errors**: Verify your Client ID and Client Secret
 2. **Connection Issues**: Check your network connectivity to Sigma Computing
 3. **Permission Errors**: Ensure your API credentials have the necessary permissions
+4. **HTTP Connection Failed**: 
+   - Ensure the Docker container is running: `docker ps | grep sigma-mcp-server`
+   - Check the server is listening: `curl http://localhost:8000/mcp`
+   - Verify port 8000 is not blocked by firewall
+5. **Claude Desktop Not Connecting**:
+   - For STDIO: Check file paths and environment variables in config
+   - For HTTP via mcp-remote: Ensure `npx mcp-remote` is accessible and Docker container is running
 
 ### Logs
 
 View logs with Docker Compose:
 ```bash
 docker-compose logs -f sigma-mcp-server
+```
+
+Check specific container logs:
+```bash
+docker logs sigma-mcp-server
+```
+
+Test HTTP endpoint health:
+```bash
+# Should return a redirect or SSE stream header
+curl -v http://localhost:8000/mcp
+```
+
+Check which transport mode is running:
+```bash
+docker logs sigma-mcp-server 2>&1 | grep "transport"
 ```
 
 ## Support

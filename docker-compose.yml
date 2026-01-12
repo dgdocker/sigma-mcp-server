@@ -5,9 +5,9 @@ services:
     build: .
     container_name: sigma-mcp-server
     
-    # MCP servers need interactive mode and TTY for stdio communication
-    stdin_open: true
-    tty: true
+    # Expose port for HTTP transport
+    ports:
+      - "8000:8000"
     
     # Load environment variables from .env file
     env_file:
@@ -15,10 +15,19 @@ services:
     
     environment:
       - PYTHONUNBUFFERED=1
+      - SIGMA_BASE_URL=${SIGMA_BASE_URL:-https://aws-api.sigmacomputing.com}
       
     # Mount logs directory
     volumes:
       - ./logs:/app/logs:rw
     
-    # Prevent restart loops during debugging
-    restart: "no"
+    # Auto-restart for HTTP server
+    restart: unless-stopped
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/mcp"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

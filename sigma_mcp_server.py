@@ -13,11 +13,16 @@ import os
 import sys
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timedelta
+from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator
 
+import click
 import httpx
+import uvicorn
 from mcp.server.models import InitializationOptions
 from mcp.server import NotificationOptions, Server
 from mcp.server.stdio import stdio_server
+from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from mcp.types import (
     Resource,
     Tool,
@@ -27,10 +32,12 @@ from mcp.types import (
     LoggingLevel
 )
 from pydantic import AnyUrl
+from starlette.applications import Starlette
+from starlette.routing import Mount
+from starlette.middleware.cors import CORSMiddleware
 
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging (will be reconfigured in main() with proper format)
 logger = logging.getLogger("sigma-mcp-server")
 
 class SigmaAPI:
@@ -825,7 +832,8 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
         
         elif name == "sigma_get_member":
             member_id = arguments["member_id"]
-            data = await sigma_api.make_request("GET", f"/v2/members/{member_id}")
+            # Use v2.1 to match the list endpoint
+            data = await sigma_api.make_request("GET", f"/v2.1/members/{member_id}")
             
             return [TextContent(type="text", text=json.dumps(data, indent=2))]
         
@@ -1015,58 +1023,133 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
         logger.error(f"Error in tool {name}: {str(e)}")
         return [TextContent(type="text", text=f"Error: {str(e)}")]
 
-async def main():
-    """Main server entry point"""
+async def run_stdio_server():
+    """Run server with STDIO transport (for Claude Desktop)."""
+    logger.info("Running with STDIO transport...")
+    
+    # Test the API connection
     try:
-        logger.info("Starting Sigma Computing MCP Server...")
-        init_sigma_api()
-        logger.info("Sigma API client initialized successfully")
-        
-        # Test the API connection
+        await sigma_api.get_access_token()
+        logger.info("Successfully authenticated with Sigma Computing API")
+    except Exception as e:
+        logger.error(f"Failed to authenticate with Sigma API: {e}")
+        raise
+    
+    logger.info("Server ready, waiting for MCP connections...")
+    
+    async with stdio_server() as (read_stream, write_stream):
+        await server.run(
+            read_stream,
+            write_stream,
+            InitializationOptions(
+                server_name="sigma-computing",
+                server_version="1.0.0",
+                capabilities=server.get_capabilities(
+                    notification_options=NotificationOptions(),
+                    experimental_capabilities={},
+                ),
+            ),
+        )
+
+def run_http_server(host: str, port: int):
+    """Run server with Streamable HTTP transport (for internal-agents)."""
+    logger.info(f"Running with Streamable HTTP transport on {host}:{port}...")
+    
+    # Test the API connection synchronously before starting server
+    async def test_connection():
         try:
             await sigma_api.get_access_token()
             logger.info("Successfully authenticated with Sigma Computing API")
         except Exception as e:
             logger.error(f"Failed to authenticate with Sigma API: {e}")
             raise
-        
-        logger.info("Server ready, waiting for MCP connections...")
-        
-        # Run the server using stdin/stdout streams
-        async with stdio_server() as (read_stream, write_stream):
-            await server.run(
-                read_stream,
-                write_stream,
-                InitializationOptions(
-                    server_name="sigma-computing",
-                    server_version="1.0.0",
-                    capabilities=server.get_capabilities(
-                        notification_options=NotificationOptions(),
-                        experimental_capabilities={},
-                    ),
-                ),
-            )
-    except KeyboardInterrupt:
-        logger.info("Server shutdown requested")
-    except Exception as e:
-        logger.error(f"Server error: {e}")
-        raise
+    
+    asyncio.run(test_connection())
+    
+    # Create the session manager
+    session_manager = StreamableHTTPSessionManager(
+        app=server,
+        json_response=False,  # Use SSE streaming
+    )
+    
+    # ASGI handler for streamable HTTP connections
+    async def handle_streamable_http(scope, receive, send):
+        await session_manager.handle_request(scope, receive, send)
+    
+    @asynccontextmanager
+    async def lifespan(app: Starlette) -> AsyncIterator[None]:
+        """Manage session manager lifecycle."""
+        async with session_manager.run():
+            logger.info("Streamable HTTP session manager started!")
+            try:
+                yield
+            finally:
+                logger.info("Shutting down session manager...")
+    
+    # Create Starlette ASGI application
+    starlette_app = Starlette(
+        debug=False,
+        routes=[
+            Mount("/mcp", app=handle_streamable_http),
+        ],
+        lifespan=lifespan,
+    )
+    
+    # Add CORS middleware
+    starlette_app = CORSMiddleware(
+        starlette_app,
+        allow_origins=["*"],
+        allow_methods=["GET", "POST", "DELETE"],
+        expose_headers=["Mcp-Session-Id"],
+    )
+    
+    logger.info(f"Server ready at http://{host}:{port}/mcp")
+    uvicorn.run(starlette_app, host=host, port=port)
 
-if __name__ == "__main__":
-    # Add signal handlers for graceful shutdown
-    import signal
+@click.command()
+@click.option(
+    '--transport',
+    type=click.Choice(['stdio', 'streamable-http']),
+    default='stdio',
+    help='Transport protocol to use'
+)
+@click.option('--host', default='0.0.0.0', help='Host to bind to (HTTP only)')
+@click.option('--port', default=8000, type=int, help='Port to listen on (HTTP only)')
+@click.option(
+    '--log-level',
+    default='INFO',
+    help='Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)'
+)
+def main(transport: str, host: str, port: int, log_level: str):
+    """Run the Sigma MCP Server with specified transport."""
+    # Configure logging (force reconfigure)
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
     
-    def signal_handler(signum, frame):
-        logger.info(f"Received signal {signum}, shutting down...")
-        sys.exit(0)
-    
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
+    logging.basicConfig(
+        level=getattr(logging, log_level.upper()),
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        force=True
+    )
     
     try:
-        asyncio.run(main())
+        logger.info(f"Starting Sigma Computing MCP Server with {transport} transport...")
+        logger.info(f"Arguments: transport={transport}, host={host}, port={port}")
+        init_sigma_api()
+        logger.info("Sigma API client initialized successfully")
+        
+        if transport == 'streamable-http':
+            logger.info("Routing to HTTP server...")
+            run_http_server(host, port)
+        else:
+            logger.info("Routing to STDIO server...")
+            asyncio.run(run_stdio_server())
+            
     except KeyboardInterrupt:
         logger.info("Server stopped by user")
     except Exception as e:
         logger.error(f"Fatal error: {e}")
         sys.exit(1)
+
+if __name__ == "__main__":
+    main()

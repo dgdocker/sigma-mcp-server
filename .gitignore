@@ -6,7 +6,11 @@ __pycache__/
 *.pyc
 
 # Logs
-logs/*.log
+logs/
+
+# Test scripts
+test_transports.sh
+rebuild_and_test.sh
 
 # OS
 .DS_Store
