@@ -807,12 +807,43 @@ Check which transport mode is running:
 docker logs sigma-mcp-server 2>&1 | grep "transport"
 ```
 
+## Agent Framework Integration
+
+### Docker CAgent Framework
+
+This repository includes a pre-configured agent file (`sigma.yaml`) for integration with Docker's **cagent** framework. CAgent enables AI-powered workflow automation with support for:
+- Slack bot integration
+- Web UI interfaces
+- Custom toolsets
+- Memory persistence
+
+**Quick start for cagent users:**
+1. Deploy the Sigma MCP Server with HTTP/SSE transport
+2. Copy `sigma.yaml` to your agent configuration directory
+3. Set environment variables (`SIGMA_MCP_URL`, Sigma API credentials)
+4. Run with `cagent run sigma.yaml --yolo`
+
+**Detailed guide:** See [CAGENT_INTEGRATION.md](CAGENT_INTEGRATION.md) for complete integration instructions.
+
+### Other Agent Frameworks
+
+The HTTP/SSE transport makes this MCP server compatible with any agent framework that supports the Model Context Protocol. The `sigma.yaml` configuration can be adapted for other systems.
+
+## Documentation Files
+
+- **[README.md](README.md)** - Main documentation (this file)
+- **[TRANSPORT_GUIDE.md](TRANSPORT_GUIDE.md)** - Detailed guide for STDIO vs HTTP/SSE transports
+- **[CAGENT_INTEGRATION.md](CAGENT_INTEGRATION.md)** - Integration guide for Docker's cagent framework
+- **[CHANGES_SUMMARY.md](CHANGES_SUMMARY.md)** - Summary of code changes and architecture
+- **[QUICK_START.md](QUICK_START.md)** - Quick reference for common commands
+
 ## Support
 
 For issues related to:
 - **MCP Server**: Create an issue in this repository
 - **Sigma Computing API**: Check [Sigma Computing documentation](https://docs.sigmacomputing.com)
 - **Authentication**: Contact your Sigma Computing administrator
+- **CAgent Integration**: See [CAGENT_INTEGRATION.md](CAGENT_INTEGRATION.md)
 
 ## License
 

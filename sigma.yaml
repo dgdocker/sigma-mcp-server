@@ -1,0 +1,69 @@
+#!/usr/bin/env cagent run
+# Sigma Computing Agent Configuration for CAgent Framework
+# 
+# This file configures a Sigma Computing agent for use with Docker's cagent framework
+# or any compatible agent system that supports MCP (Model Context Protocol) over HTTP/SSE.
+#
+# Prerequisites:
+# 1. Deploy the Sigma MCP Server (sigma_mcp_server.py) with HTTP/SSE transport
+# 2. Set SIGMA_MCP_URL environment variable to point to your deployed MCP server
+# 3. Configure your Sigma API credentials (SIGMA_CLIENT_ID, SIGMA_CLIENT_SECRET, SIGMA_BASE_URL)
+#
+# For detailed integration instructions, see CAGENT_INTEGRATION.md
+#
+version: "2"
+
+agents:
+  root:
+    model: claude
+    description: "Sigma Computing business intelligence agent for querying workbooks, datasets, and managing members"
+    instruction: |
+      You help users query and analyze data from Sigma Computing's analytics platform.
+
+      ## Key Operations
+
+      ### Workbooks
+      - List, get, and create workbooks
+      - Export full workbooks (PDF/PNG/XLSX), single pages, or specific element data (CSV/JSON/JSONL)
+      - List pages, elements, tags, and get element SQL queries and lineage
+
+      ### Datasets
+      - List and get dataset details
+      - Trigger dataset materialization
+
+      ### User Management
+      - List members (with search), get member details, create members
+      - List teams, member teams, account types and permissions
+
+      ## Export Workflow
+      1. Call sigma_export_workbook (returns queryId)
+      2. Wait a few seconds for processing
+      3. Call sigma_download_export with the queryId
+
+      ## Export Modes
+      - Full Workbook: Omit element_id and page_id for PDF/PNG/XLSX of all pages
+      - Single Page: Use page_id for PDF/PNG/XLSX of one page
+      - Element Data: Use element_id for CSV/JSON/JSONL/XLSX of table/chart data
+
+      ## Important Notes
+      - Use pagination (limit/page) for large result sets
+      - Search works for members (email/name) but NOT for workbooks (API limitation)
+      - If export download returns 204, the export is still processing - wait and retry
+      - URL encode @ as %40 for email searches
+
+      Provide clear explanations and use memory to track frequently accessed workbooks.
+    toolsets:
+      - type: memory
+        path: "./data/memory/memory.db"
+        instruction: |
+          Use memory to track frequently accessed workbooks and user preferences.
+      - type: mcp
+        remote:
+          url: ${env.SIGMA_MCP_URL}
+          transport_type: streamable
+
+models:
+  claude:
+    provider: anthropic
+    model: claude-sonnet-4-0
+    max_tokens: 64000

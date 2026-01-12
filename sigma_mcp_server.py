@@ -168,7 +168,7 @@ async def handle_read_resource(uri: AnyUrl) -> str:
         return json.dumps(data, indent=2)
     
     elif uri_str == "sigma://members":
-        data = await sigma_api.make_request("GET", "/v2.1/members?limit=100")
+        data = await sigma_api.make_request("GET", "/v2/members?limit=100")
         return json.dumps(data, indent=2)
     
     elif uri_str == "sigma://connections":
@@ -380,13 +380,13 @@ async def handle_list_tools() -> List[Tool]:
         ),
         Tool(
             name="sigma_get_member",
-            description="Get detailed information about a specific organization member by ID",
+            description="Get detailed information about a specific organization member by ID. Note: This endpoint may return 404 for some members depending on permissions or account status. Use sigma_list_members with search parameter as an alternative.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "member_id": {
                         "type": "string",
-                        "description": "Unique identifier for the member",
+                        "description": "Unique identifier for the member (get from sigma_list_members)",
                     }
                 },
                 "required": ["member_id"],
@@ -826,14 +826,13 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
                 params["includeInactive"] = str(include_inactive).lower()
             
             query_string = "&".join([f"{k}={v}" for k, v in params.items()])
-            data = await sigma_api.make_request("GET", f"/v2.1/members?{query_string}")
+            data = await sigma_api.make_request("GET", f"/v2/members?{query_string}")
             
             return [TextContent(type="text", text=json.dumps(data, indent=2))]
         
         elif name == "sigma_get_member":
             member_id = arguments["member_id"]
-            # Use v2.1 to match the list endpoint
-            data = await sigma_api.make_request("GET", f"/v2.1/members/{member_id}")
+            data = await sigma_api.make_request("GET", f"/v2/members/{member_id}")
             
             return [TextContent(type="text", text=json.dumps(data, indent=2))]
         
