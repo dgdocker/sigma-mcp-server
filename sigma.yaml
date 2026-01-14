@@ -37,6 +37,7 @@ agents:
       
       ### Permissions Management
       - Grant workbook permissions to users or teams (view, explore, or edit access)
+      - List grants to audit who has access to workbooks, with automatic name resolution
       - Support for multiple grants in a single request
 
       ## Export Workflow
@@ -55,6 +56,12 @@ agents:
       - If export download returns 204, the export is still processing - wait and retry
       - URL encode @ as %40 for email searches
       - When granting permissions, specify either member_id OR team_id per grant, not both
+      
+      ## Access Checking
+      - When determining "do I have access?", check BOTH user grants AND team grants
+      - System teams like "All Members" may show as "Unknown (possibly All Members or system team)"
+      - If a workbook has a grant to an Unknown team, it likely means all organization members have access
+      - Always list grants on a workbook to see the complete access picture
 
       Provide clear explanations and use memory to track frequently accessed workbooks.
     toolsets:

@@ -518,6 +518,42 @@ async def handle_list_tools() -> List[Tool]:
             },
         ),
         Tool(
+            name="sigma_list_grants",
+            description="List all permission grants for a workbook, user, or team. Useful for auditing who has access to resources.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "workbook_id": {
+                        "type": "string",
+                        "description": "Workbook ID to list grants for (get from sigma_list_workbooks). Specify one of: workbook_id, user_id, or team_id.",
+                    },
+                    "user_id": {
+                        "type": "string",
+                        "description": "User/member ID to list grants for (get from sigma_list_members). Specify one of: workbook_id, user_id, or team_id.",
+                    },
+                    "team_id": {
+                        "type": "string",
+                        "description": "Team ID to list grants for (get from sigma_list_teams). Specify one of: workbook_id, user_id, or team_id.",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Number of grants to return per page (max: 1000)",
+                        "default": 100,
+                        "maximum": 1000
+                    },
+                    "page": {
+                        "type": "string",
+                        "description": "Page token from nextPage in previous response for pagination",
+                    },
+                    "direct_grants_only": {
+                        "type": "boolean",
+                        "description": "If true, only return direct grants (exclude inherited permissions)",
+                        "default": false
+                    }
+                }
+            },
+        ),
+        Tool(
             name="sigma_list_account_types",
             description="List all account types available in the organization",
             inputSchema={
@@ -1004,6 +1040,93 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
             
             return [TextContent(type="text", text=json.dumps(result, indent=2))]
         
+        elif name == "sigma_list_grants":
+            # Build query parameters
+            params = {}
+            
+            # Determine which filter to use
+            if arguments.get("workbook_id"):
+                params["inodeId"] = arguments["workbook_id"]
+            elif arguments.get("user_id"):
+                params["userId"] = arguments["user_id"]
+            elif arguments.get("team_id"):
+                params["teamId"] = arguments["team_id"]
+            
+            # Add pagination and filter parameters
+            limit = arguments.get("limit", 100)
+            params["limit"] = limit
+            
+            if arguments.get("page"):
+                params["page"] = arguments["page"]
+            
+            if arguments.get("direct_grants_only"):
+                params["directGrantsOnly"] = "true" if arguments["direct_grants_only"] else "false"
+            
+            query_string = "&".join([f"{k}={v}" for k, v in params.items()])
+            data = await sigma_api.make_request("GET", f"/v2/grants?{query_string}")
+            
+            # Enhance grants with resolved names
+            if "entries" in data:
+                # Get all unique member and team IDs
+                member_ids = set()
+                team_ids = set()
+                
+                for grant in data["entries"]:
+                    grantee = grant.get("grantee", {})
+                    if grantee.get("memberId"):
+                        member_ids.add(grantee["memberId"])
+                    elif grantee.get("teamId"):
+                        team_ids.add(grantee["teamId"])
+                
+                # Fetch member names
+                member_names = {}
+                if member_ids:
+                    try:
+                        members_data = await sigma_api.make_request("GET", "/v2/members?limit=1000")
+                        for member in members_data.get("entries", []):
+                            mid = member.get("memberId")
+                            if mid in member_ids:
+                                email = member.get("email", "")
+                                first = member.get("firstName", "")
+                                last = member.get("lastName", "")
+                                name = f"{first} {last} ({email})".strip()
+                                if name.startswith("("):
+                                    name = email
+                                member_names[mid] = name
+                    except Exception as e:
+                        logger.warning(f"Could not fetch member names: {e}")
+                
+                # Fetch team names
+                team_names = {}
+                if team_ids:
+                    try:
+                        teams_data = await sigma_api.make_request("GET", "/v2.1/teams?limit=1000")
+                        for team in teams_data.get("entries", []):
+                            tid = team.get("teamId")
+                            if tid in team_ids:
+                                team_names[tid] = team.get("name", "Unknown")
+                    except Exception as e:
+                        logger.warning(f"Could not fetch team names: {e}")
+                
+                # Enhance each grant with resolved names
+                for grant in data["entries"]:
+                    grantee = grant.get("grantee", {})
+                    
+                    if grantee.get("memberId"):
+                        mid = grantee["memberId"]
+                        grantee["memberName"] = member_names.get(
+                            mid, 
+                            "Unknown (member not found)"
+                        )
+                    elif grantee.get("teamId"):
+                        tid = grantee["teamId"]
+                        grantee["teamName"] = team_names.get(
+                            tid,
+                            "Unknown (possibly All Members or system team)"
+                        )
+            
+            return [TextContent(type="text", text=json.dumps(data, indent=2))]
+        
         elif name == "sigma_list_account_types":
             page_size = arguments.get("page_size", 50)
             page_token = arguments.get("page_token")
@@ -1157,30 +1280,30 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
 async def run_stdio_server():
     """Run server with STDIO transport (for Claude Desktop)."""
     logger.info("Running with STDIO transport...")
-    
-    # Test the API connection
-    try:
-        await sigma_api.get_access_token()
-        logger.info("Successfully authenticated with Sigma Computing API")
-    except Exception as e:
-        logger.error(f"Failed to authenticate with Sigma API: {e}")
-        raise
-    
-    logger.info("Server ready, waiting for MCP connections...")
-    
-    async with stdio_server() as (read_stream, write_stream):
-        await server.run(
-            read_stream,
-            write_stream,
-            InitializationOptions(
-                server_name="sigma-computing",
-                server_version="1.0.0",
-                capabilities=server.get_capabilities(
-                    notification_options=NotificationOptions(),
-                    experimental_capabilities={},
+        
+        # Test the API connection
+        try:
+            await sigma_api.get_access_token()
+            logger.info("Successfully authenticated with Sigma Computing API")
+        except Exception as e:
+            logger.error(f"Failed to authenticate with Sigma API: {e}")
+            raise
+        
+        logger.info("Server ready, waiting for MCP connections...")
+        
+        async with stdio_server() as (read_stream, write_stream):
+            await server.run(
+                read_stream,
+                write_stream,
+                InitializationOptions(
+                    server_name="sigma-computing",
+                    server_version="1.0.0",
+                    capabilities=server.get_capabilities(
+                        notification_options=NotificationOptions(),
+                        experimental_capabilities={},
+                    ),
                 ),
-            ),
-        )
+            )
 
 def run_http_server(host: str, port: int):
     """Run server with Streamable HTTP transport (for internal-agents)."""
@@ -1191,10 +1314,10 @@ def run_http_server(host: str, port: int):
         try:
             await sigma_api.get_access_token()
             logger.info("Successfully authenticated with Sigma Computing API")
-        except Exception as e:
+    except Exception as e:
             logger.error(f"Failed to authenticate with Sigma API: {e}")
-            raise
-    
+        raise
+
     asyncio.run(test_connection())
     
     # Create the session manager

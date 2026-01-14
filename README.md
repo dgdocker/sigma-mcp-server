@@ -386,6 +386,7 @@ spec:
 
 ### Permissions Management
 - `sigma_grant_permissions` - Grant permissions on workbooks to users or teams
+- `sigma_list_grants` - List all permission grants for a workbook, user, or team (with name resolution)
 
 ## Available Resources
 
@@ -668,6 +669,65 @@ Grant permissions to users or teams on a workbook. You can grant to multiple use
 - `tag_id` - Grant permissions on a specific version of the workbook (get from `sigma_list_workbook_tags`)
 
 > **Note:** Each grant must specify either `member_id` OR `team_id`, not both. Get member IDs from `sigma_list_members` and team IDs from `sigma_list_teams`.
+
+### List Grants on Workbook
+
+List all permission grants to audit who has access to a workbook. The response includes automatically resolved member and team names.
+
+#### List Grants for a Workbook
+```json
+{
+  "tool": "sigma_list_grants",
+  "arguments": {
+    "workbook_id": "workbook-uuid-here",
+    "limit": 100
+  }
+}
+```
+
+#### List All Grants for a User
+```json
+{
+  "tool": "sigma_list_grants",
+  "arguments": {
+    "user_id": "member-uuid-here",
+    "limit": 100
+  }
+}
+```
+
+#### List All Grants for a Team
+```json
+{
+  "tool": "sigma_list_grants",
+  "arguments": {
+    "team_id": "team-uuid-here",
+    "limit": 100
+  }
+}
+```
+
+#### List Only Direct Grants (Exclude Inherited)
+```json
+{
+  "tool": "sigma_list_grants",
+  "arguments": {
+    "workbook_id": "workbook-uuid-here",
+    "direct_grants_only": true,
+    "limit": 100
+  }
+}
+```
+
+**Response Format:**
+The tool automatically resolves member and team names. If a team cannot be found in the API, it's marked as "Unknown (possibly All Members or system team)" - this typically indicates a special system team like "All Members" that grants access to everyone in the organization.
+
+**Query Options:**
+- Specify ONE of: `workbook_id`, `user_id`, or `team_id`
+- Use `limit` and `page` for pagination (max 1000 per page)
+- Use `direct_grants_only` to exclude inherited permissions
+
+> **Note:** System teams like "All Members" may not appear in `sigma_list_teams` but will show in grants as "Unknown (possibly All Members or system team)". If you see this, it typically means all organization members have access.
 
 ### List Account Types
 ```json
