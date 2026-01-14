@@ -1072,11 +1072,10 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
                 team_ids = set()
                 
                 for grant in data["entries"]:
-                    grantee = grant.get("grantee", {})
-                    if grantee.get("memberId"):
-                        member_ids.add(grantee["memberId"])
-                    elif grantee.get("teamId"):
-                        team_ids.add(grantee["teamId"])
+                    if grant.get("memberId"):
+                        member_ids.add(grant["memberId"])
+                    elif grant.get("teamId"):
+                        team_ids.add(grant["teamId"])
                 
                 # Fetch member names
                 member_names = {}
@@ -1110,17 +1109,15 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
                 
                 # Enhance each grant with resolved names
                 for grant in data["entries"]:
-                    grantee = grant.get("grantee", {})
-                    
-                    if grantee.get("memberId"):
-                        mid = grantee["memberId"]
-                        grantee["memberName"] = member_names.get(
+                    if grant.get("memberId"):
+                        mid = grant["memberId"]
+                        grant["memberName"] = member_names.get(
                             mid, 
                             "Unknown (member not found)"
                         )
-                    elif grantee.get("teamId"):
-                        tid = grantee["teamId"]
-                        grantee["teamName"] = team_names.get(
+                    elif grant.get("teamId"):
+                        tid = grant["teamId"]
+                        grant["teamName"] = team_names.get(
                             tid,
                             "Unknown (possibly All Members or system team)"
                         )
