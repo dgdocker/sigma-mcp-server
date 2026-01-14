@@ -446,10 +446,75 @@ async def handle_list_tools() -> List[Tool]:
         ),
         Tool(
             name="sigma_list_teams",
-            description="List all teams in the organization",
+            description="List all teams in the organization (paginated)",
             inputSchema={
                 "type": "object",
-                "properties": {}
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "description": "Number of teams to return per page (max: 1000)",
+                        "default": 50,
+                        "maximum": 1000
+                    },
+                    "page": {
+                        "type": "string",
+                        "description": "Page token from nextPage in previous response",
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Filter teams by name",
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Filter teams by description",
+                    },
+                    "visibility": {
+                        "type": "string",
+                        "enum": ["public", "private"],
+                        "description": "Filter teams by visibility (public or private)",
+                    }
+                }
+            },
+        ),
+        Tool(
+            name="sigma_grant_permissions",
+            description="Grant permissions on a workbook to users or teams. Can grant to multiple users/teams in a single request.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "workbook_id": {
+                        "type": "string",
+                        "description": "Unique identifier of the workbook (get from sigma_list_workbooks)",
+                    },
+                    "grants": {
+                        "type": "array",
+                        "description": "Array of grant objects to apply",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "member_id": {
+                                    "type": "string",
+                                    "description": "Member ID to grant permissions to (get from sigma_list_members). Do not set both member_id and team_id.",
+                                },
+                                "team_id": {
+                                    "type": "string",
+                                    "description": "Team ID to grant permissions to (get from sigma_list_teams). Do not set both member_id and team_id.",
+                                },
+                                "permission": {
+                                    "type": "string",
+                                    "enum": ["view", "explore", "edit"],
+                                    "description": "Permission level to grant: view (read-only), explore (can create variations), or edit (full editing)",
+                                },
+                                "tag_id": {
+                                    "type": "string",
+                                    "description": "Optional: Version tag ID to grant permissions on a specific version (get from sigma_list_tags)",
+                                }
+                            },
+                            "required": ["permission"]
+                        }
+                    }
+                },
+                "required": ["workbook_id", "grants"],
             },
         ),
         Tool(
@@ -868,9 +933,76 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
             return [TextContent(type="text", text=json.dumps(data, indent=2))]
         
         elif name == "sigma_list_teams":
-            data = await sigma_api.make_request("GET", "/v2/teams")
+            limit = arguments.get("limit", 50)
+            page = arguments.get("page")
+            name = arguments.get("name")
+            description = arguments.get("description")
+            visibility = arguments.get("visibility")
+            
+            params = {"limit": limit}
+            if page:
+                params["page"] = page
+            if name:
+                params["name"] = name
+            if description:
+                params["description"] = description
+            if visibility:
+                params["visibility"] = visibility
+            
+            query_string = "&".join([f"{k}={v}" for k, v in params.items()])
+            data = await sigma_api.make_request("GET", f"/v2.1/teams?{query_string}")
             
             return [TextContent(type="text", text=json.dumps(data, indent=2))]
+        
+        elif name == "sigma_grant_permissions":
+            workbook_id = arguments["workbook_id"]
+            grants_input = arguments["grants"]
+            
+            # Transform the input grants to the API format
+            grants_payload = []
+            for grant in grants_input:
+                grant_obj = {
+                    "grantee": {},
+                    "permission": grant["permission"]
+                }
+                
+                # Set either memberId or teamId
+                if grant.get("member_id"):
+                    grant_obj["grantee"]["memberId"] = grant["member_id"]
+                elif grant.get("team_id"):
+                    grant_obj["grantee"]["teamId"] = grant["team_id"]
+                else:
+                    return [TextContent(
+                        type="text",
+                        text=json.dumps({
+                            "error": "Each grant must specify either member_id or team_id"
+                        }, indent=2)
+                    )]
+                
+                # Add optional tagId
+                if grant.get("tag_id"):
+                    grant_obj["tagId"] = grant["tag_id"]
+                
+                grants_payload.append(grant_obj)
+            
+            payload = {"grants": grants_payload}
+            
+            data = await sigma_api.make_request(
+                "POST",
+                f"/v2/workbooks/{workbook_id}/grants",
+                json=payload,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            # Return success message with details
+            result = {
+                "success": True,
+                "workbook_id": workbook_id,
+                "grants_applied": len(grants_payload),
+                "details": grants_payload
+            }
+            
+            return [TextContent(type="text", text=json.dumps(result, indent=2))]
         
         elif name == "sigma_list_account_types":
             page_size = arguments.get("page_size", 50)

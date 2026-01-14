@@ -380,9 +380,12 @@ spec:
 - `sigma_get_member` - Get detailed information about a specific member by ID
 - `sigma_create_member` - Create new organization member
 - `sigma_list_member_teams` - List teams for a specific member
-- `sigma_list_teams` - List organization teams
+- `sigma_list_teams` - List organization teams (paginated)
 - `sigma_list_account_types` - List all account types available in the organization
 - `sigma_get_account_type_permissions` - Get all feature permissions for a specific account type
+
+### Permissions Management
+- `sigma_grant_permissions` - Grant permissions on workbooks to users or teams
 
 ## Available Resources
 
@@ -569,11 +572,17 @@ Export data from a specific table or visualization:
 }
 ```
 
-### List All Teams
+### List All Teams (Paginated)
 ```json
 {
   "tool": "sigma_list_teams",
-  "arguments": {}
+  "arguments": {
+    "limit": 50,
+    "page": "optional_page_token",
+    "name": "optional_team_name_filter",
+    "description": "optional_description_filter",
+    "visibility": "public"
+  }
 }
 ```
 
@@ -589,6 +598,76 @@ Export data from a specific table or visualization:
   }
 }
 ```
+
+### Grant Permissions on Workbook
+
+Grant permissions to users or teams on a workbook. You can grant to multiple users/teams in a single request.
+
+#### Grant to a Single User
+```json
+{
+  "tool": "sigma_grant_permissions",
+  "arguments": {
+    "workbook_id": "workbook-uuid-here",
+    "grants": [
+      {
+        "member_id": "member-uuid-here",
+        "permission": "view"
+      }
+    ]
+  }
+}
+```
+
+#### Grant to a Team
+```json
+{
+  "tool": "sigma_grant_permissions",
+  "arguments": {
+    "workbook_id": "workbook-uuid-here",
+    "grants": [
+      {
+        "team_id": "team-uuid-here",
+        "permission": "explore"
+      }
+    ]
+  }
+}
+```
+
+#### Grant to Multiple Users and Teams
+```json
+{
+  "tool": "sigma_grant_permissions",
+  "arguments": {
+    "workbook_id": "workbook-uuid-here",
+    "grants": [
+      {
+        "member_id": "member-uuid-1",
+        "permission": "edit"
+      },
+      {
+        "team_id": "team-uuid-1",
+        "permission": "view"
+      },
+      {
+        "member_id": "member-uuid-2",
+        "permission": "explore"
+      }
+    ]
+  }
+}
+```
+
+**Permission Levels:**
+- `view` - Read-only access to the workbook
+- `explore` - Can create variations and explore data
+- `edit` - Full editing capabilities
+
+**Optional Parameters:**
+- `tag_id` - Grant permissions on a specific version of the workbook (get from `sigma_list_workbook_tags`)
+
+> **Note:** Each grant must specify either `member_id` OR `team_id`, not both. Get member IDs from `sigma_list_members` and team IDs from `sigma_list_teams`.
 
 ### List Account Types
 ```json

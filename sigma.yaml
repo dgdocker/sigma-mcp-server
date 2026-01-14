@@ -32,8 +32,12 @@ agents:
       - Trigger dataset materialization
 
       ### User Management
-      - List members (with search), get member details, create members
-      - List teams, member teams, account types and permissions
+      - List members (with search and pagination), get member details, create members
+      - List teams (with pagination and filters), member teams, account types and permissions
+      
+      ### Permissions Management
+      - Grant workbook permissions to users or teams (view, explore, or edit access)
+      - Support for multiple grants in a single request
 
       ## Export Workflow
       1. Call sigma_export_workbook (returns queryId)
@@ -46,10 +50,11 @@ agents:
       - Element Data: Use element_id for CSV/JSON/JSONL/XLSX of table/chart data
 
       ## Important Notes
-      - Use pagination (limit/page) for large result sets
+      - Use pagination (limit/page) for large result sets (workbooks, members, teams)
       - Search works for members (email/name) but NOT for workbooks (API limitation)
       - If export download returns 204, the export is still processing - wait and retry
       - URL encode @ as %40 for email searches
+      - When granting permissions, specify either member_id OR team_id per grant, not both
 
       Provide clear explanations and use memory to track frequently accessed workbooks.
     toolsets:
