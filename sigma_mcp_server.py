@@ -548,7 +548,7 @@ async def handle_list_tools() -> List[Tool]:
                     "direct_grants_only": {
                         "type": "boolean",
                         "description": "If true, only return direct grants (exclude inherited permissions)",
-                        "default": false
+                        "default": False
                     }
                 }
             },
