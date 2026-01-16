@@ -633,6 +633,28 @@ async def handle_list_tools() -> List[Tool]:
             },
         ),
         Tool(
+            name="sigma_list_tags",
+            description="List all version tags in the organization (paginated). Use this to discover available tags across all workbooks.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "description": "Number of tags to return per page (max: 1000)",
+                        "maximum": 1000
+                    },
+                    "page": {
+                        "type": "string",
+                        "description": "Page token from nextPage in previous response for pagination",
+                    },
+                    "search": {
+                        "type": "string",
+                        "description": "Search query to filter tags by name",
+                    }
+                }
+            },
+        ),
+        Tool(
             name="sigma_list_workbook_pages",
             description="List all pages contained within a specified workbook",
             inputSchema={
@@ -1199,6 +1221,28 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
             
             query_string = "&".join([f"{k}={v}" for k, v in params.items()]) if params else ""
             endpoint = f"/v2/tags/{tag_id}/workbooks"
+            if query_string:
+                endpoint += f"?{query_string}"
+            
+            data = await sigma_api.make_request("GET", endpoint)
+            
+            return [TextContent(type="text", text=json.dumps(data, indent=2))]
+        
+        elif name == "sigma_list_tags":
+            limit = arguments.get("limit")
+            page = arguments.get("page")
+            search = arguments.get("search")
+            
+            params = {}
+            if limit:
+                params["limit"] = limit
+            if page:
+                params["page"] = page
+            if search:
+                params["search"] = search
+            
+            query_string = "&".join([f"{k}={v}" for k, v in params.items()]) if params else ""
+            endpoint = "/v2/tags"
             if query_string:
                 endpoint += f"?{query_string}"
             
