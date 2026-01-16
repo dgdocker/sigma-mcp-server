@@ -610,6 +610,29 @@ async def handle_list_tools() -> List[Tool]:
             },
         ),
         Tool(
+            name="sigma_list_workbooks_by_tag",
+            description="List all workbooks for a specific version tag (paginated). Use sigma_list_workbook_tags to get the tag ID.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "tag_id": {
+                        "type": "string",
+                        "description": "Tag/version tag ID (get from sigma_list_workbook_tags using versionTagId)",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Number of workbooks to return per page (max: 1000)",
+                        "maximum": 1000
+                    },
+                    "page": {
+                        "type": "string",
+                        "description": "Page token from nextPage in previous response for pagination",
+                    }
+                },
+                "required": ["tag_id"],
+            },
+        ),
+        Tool(
             name="sigma_list_workbook_pages",
             description="List all pages contained within a specified workbook",
             inputSchema={
@@ -1156,6 +1179,26 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
             
             query_string = "&".join([f"{k}={v}" for k, v in params.items()]) if params else ""
             endpoint = f"/v2/workbooks/{workbook_id}/tags"
+            if query_string:
+                endpoint += f"?{query_string}"
+            
+            data = await sigma_api.make_request("GET", endpoint)
+            
+            return [TextContent(type="text", text=json.dumps(data, indent=2))]
+        
+        elif name == "sigma_list_workbooks_by_tag":
+            tag_id = arguments["tag_id"]
+            limit = arguments.get("limit")
+            page = arguments.get("page")
+            
+            params = {}
+            if limit:
+                params["limit"] = limit
+            if page:
+                params["page"] = page
+            
+            query_string = "&".join([f"{k}={v}" for k, v in params.items()]) if params else ""
+            endpoint = f"/v2/tags/{tag_id}/workbooks"
             if query_string:
                 endpoint += f"?{query_string}"
             
