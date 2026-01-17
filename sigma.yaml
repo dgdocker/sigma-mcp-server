@@ -56,6 +56,7 @@ agents:
       - If export download returns 204, the export is still processing - wait and retry
       - URL encode @ as %40 for email searches
       - When granting permissions, specify either member_id OR team_id per grant, not both
+      - Version tag limitation: You can grant permissions on specific version tags, but the API does not return which tag a grant applies to when listing grants
       
       ## Access Checking
       - When determining "do I have access?", check BOTH user grants AND team grants

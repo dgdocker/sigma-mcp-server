@@ -385,8 +385,10 @@ spec:
 - `sigma_get_account_type_permissions` - Get all feature permissions for a specific account type
 
 ### Permissions Management
-- `sigma_grant_permissions` - Grant permissions on workbooks to users or teams
+- `sigma_grant_permissions` - Grant permissions on workbooks to users or teams (supports version tags)
 - `sigma_list_grants` - List all permission grants for a workbook, user, or team (with name resolution)
+
+**⚠️ Known Limitation**: While `sigma_grant_permissions` supports granting permissions on specific version tags, the Sigma API does not return tag/version information when listing grants via `sigma_list_grants`. Tag-specific grants will appear as regular grants without any indication of which version tag they apply to. Use the Sigma UI to view version-specific grant details.
 
 ## Available Resources
 
