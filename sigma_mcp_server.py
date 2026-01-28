@@ -1364,30 +1364,30 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
 async def run_stdio_server():
     """Run server with STDIO transport (for Claude Desktop)."""
     logger.info("Running with STDIO transport...")
-        
-        # Test the API connection
-        try:
-            await sigma_api.get_access_token()
-            logger.info("Successfully authenticated with Sigma Computing API")
-        except Exception as e:
-            logger.error(f"Failed to authenticate with Sigma API: {e}")
-            raise
-        
-        logger.info("Server ready, waiting for MCP connections...")
-        
-        async with stdio_server() as (read_stream, write_stream):
-            await server.run(
-                read_stream,
-                write_stream,
-                InitializationOptions(
-                    server_name="sigma-computing",
-                    server_version="1.0.0",
-                    capabilities=server.get_capabilities(
-                        notification_options=NotificationOptions(),
-                        experimental_capabilities={},
-                    ),
+    
+    # Test the API connection
+    try:
+        await sigma_api.get_access_token()
+        logger.info("Successfully authenticated with Sigma Computing API")
+    except Exception as e:
+        logger.error(f"Failed to authenticate with Sigma API: {e}")
+        raise
+    
+    logger.info("Server ready, waiting for MCP connections...")
+    
+    async with stdio_server() as (read_stream, write_stream):
+        await server.run(
+            read_stream,
+            write_stream,
+            InitializationOptions(
+                server_name="sigma-computing",
+                server_version="1.0.0",
+                capabilities=server.get_capabilities(
+                    notification_options=NotificationOptions(),
+                    experimental_capabilities={},
                 ),
-            )
+            ),
+        )
 
 def run_http_server(host: str, port: int):
     """Run server with Streamable HTTP transport (for internal-agents)."""
@@ -1398,9 +1398,9 @@ def run_http_server(host: str, port: int):
         try:
             await sigma_api.get_access_token()
             logger.info("Successfully authenticated with Sigma Computing API")
-    except Exception as e:
+        except Exception as e:
             logger.error(f"Failed to authenticate with Sigma API: {e}")
-        raise
+            raise
 
     asyncio.run(test_connection())
     
@@ -1410,8 +1410,21 @@ def run_http_server(host: str, port: int):
         json_response=False,  # Use SSE streaming
     )
     
-    # ASGI handler for streamable HTTP connections
+    # ASGI handler for streamable HTTP connections with header debugging
     async def handle_streamable_http(scope, receive, send):
+        # Debug: Log all incoming headers to diagnose proxy issues
+        if scope["type"] == "http":
+            headers = dict(scope.get("headers", []))
+            # Decode header bytes for logging
+            headers_decoded = {k.decode(): v.decode() for k, v in headers.items()}
+            
+            # Check for MCP session ID header (case-insensitive)
+            session_id = headers_decoded.get("mcp-session-id", "NOT PRESENT")
+            
+            logger.debug(f"Incoming request: {scope.get('method')} {scope.get('path')}")
+            logger.debug(f"All headers: {headers_decoded}")
+            logger.info(f"Mcp-Session-Id header: {session_id}")
+        
         await session_manager.handle_request(scope, receive, send)
     
     @asynccontextmanager
@@ -1438,7 +1451,8 @@ def run_http_server(host: str, port: int):
         starlette_app,
         allow_origins=["*"],
         allow_methods=["GET", "POST", "DELETE"],
-        expose_headers=["Mcp-Session-Id"],
+        allow_headers=["Content-Type", "Mcp-Session-Id", "Authorization"],  # Allow MCP session header in requests
+        expose_headers=["Mcp-Session-Id"],  # Expose MCP session header in responses
     )
     
     logger.info(f"Server ready at http://{host}:{port}/mcp")
